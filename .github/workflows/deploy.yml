@@ -1,0 +1,69 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/financeflow-backend:latest
+            ${{ secrets.REGISTRY_URL }}/financeflow-backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.REGISTRY_URL }}/financeflow-backend:latest
+          cache-to: type=inline
+      
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/financeflow-frontend:latest
+            ${{ secrets.REGISTRY_URL }}/financeflow-frontend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.REGISTRY_URL }}/financeflow-frontend:latest
+          cache-to: type=inline
+      
+      # Uncomment for Kubernetes deployment
+      # - name: Deploy to Kubernetes
+      #   uses: azure/k8s-deploy@v4
+      #   with:
+      #     manifests: |
+      #       k8s/deployment.yml
+      #       k8s/service.yml
+      #     images: |
+      #       ${{ secrets.REGISTRY_URL }}/financeflow-backend:${{ github.sha }}
+      #       ${{ secrets.REGISTRY_URL }}/financeflow-frontend:${{ github.sha }}
+      #     kubectl-version: 'latest'
+      
+      - name: Notify deployment
+        if: success()
+        run: |
+          echo "Deployment successful!"
+          echo "Backend: ${{ secrets.REGISTRY_URL }}/financeflow-backend:${{ github.sha }}"
+          echo "Frontend: ${{ secrets.REGISTRY_URL }}/financeflow-frontend:${{ github.sha }}"

@@ -1,0 +1,112 @@
+---
+  Configuração no IntelliJ IDEA
+
+  Pré-requisitos
+
+  - IntelliJ IDEA (Community ou Ultimate)                                                                      
+  - JDK 17 — obrigatório (pom.xml exige <java.version>17</java.version>)
+  - Docker Desktop — para o PostgreSQL
+  - Node.js 20+ — para o frontend (opcional se for só backend)
+
+  ---
+  Passo 1 — Subir o PostgreSQL via Docker
+
+  O projeto não inclui H2 para rodar (apenas para testes). Você precisa do Postgres rodando antes de iniciar o Spring Boot.
+
+  No terminal, dentro de C:\DSSistemas\financeflow, suba só o banco:
+
+  docker compose up postgres -d
+
+  Isso cria o banco financeflow com usuário financeflow / senha financeflow na porta 5432.
+
+  ---
+  Passo 2 — Abrir o projeto no IntelliJ
+
+  1. File → Open → selecionar a pasta C:\DSSistemas\financeflow\backend
+  2. IntelliJ vai detectar o pom.xml automaticamente e importar o projeto Maven
+  3. Aguardar o download das dependências (pode demorar na primeira vez)
+
+  ---
+  Passo 3 — Configurar o JDK 17
+
+  File → Project Structure → Project
+  - SDK: selecionar ou baixar o JDK 17 (Eclipse Temurin ou Amazon Corretto recomendados)
+  - Language level: 17
+
+  File → Project Structure → Modules → Sources
+  - Confirmar que Language level está em 17
+
+  ---
+  Passo 4 — Habilitar Annotation Processing (OBRIGATÓRIO)
+
+  O projeto usa Lombok e MapStruct — sem isso o código não compila.
+
+  File → Settings → Build, Execution, Deployment → Compiler → Annotation Processors
+  - Marcar: Enable annotation processing
+  - Apply + OK
+
+  ---
+  Passo 5 — Criar a Run Configuration
+
+  Run → Edit Configurations → + → Spring Boot
+
+  ┌────────────┬────────────────────────────────────────┐
+  │   Campo    │                 Valor                  │
+  ├────────────┼────────────────────────────────────────┤
+  │ Name       │ FinanceFlow API                        │
+  ├────────────┼────────────────────────────────────────┤
+  │ Main class │ com.financeflow.FinanceFlowApplication │
+  ├────────────┼────────────────────────────────────────┤
+  │ JRE        │ JDK 17                                 │
+  └────────────┴────────────────────────────────────────┘
+
+  Em Environment variables (clicar no ícone de pasta), adicionar:
+
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_NAME=financeflow
+  DB_USER=financeflow
+  DB_PASSWORD=financeflow
+
+  ▎ As demais variáveis (JWT, email, Gemini) já têm defaults no application.yml e funcionam para dev.
+
+  ---
+  Passo 6 — Rodar a aplicação
+
+  Clique em Run (Shift+F10). O Spring Boot vai:
+  1. Conectar no PostgreSQL
+  2. Executar as 22 migrations do Flyway automaticamente
+  3. Subir na porta 8080
+
+  Confirmar no log:
+  Started FinanceFlowApplication in X seconds
+
+  Testar: http://localhost:8080/actuator/health
+
+  ---
+  Frontend (opcional)
+
+  Em um terminal separado:
+
+  cd C:\DSSistemas\financeflow\frontend
+  npm install
+  npm run dev
+
+  Acessa em http://localhost:8081 — o Vite já faz proxy de /api para :8080.
+
+  ---
+  Problemas comuns
+
+  ┌────────────────────────────────────────┬────────────────────────────────────┬───────────────────────────────────────────────┐
+  │                  Erro                  │               Causa                │                    Solução                    │
+  ├────────────────────────────────────────┼────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Connection refused: localhost:5432     │ Postgres não está rodando          │ docker compose up postgres -d                 │
+  ├────────────────────────────────────────┼────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Cannot find symbol (Lombok/MapStruct)  │ Annotation processing desabilitado │ Passo 4                                       │
+  ├────────────────────────────────────────┼────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ FlywayException: validate failed       │ Migration alterada                 │ Nunca editar migrations existentes            │
+  ├────────────────────────────────────────┼────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ java.lang.UnsupportedClassVersionError │ JDK incorreto                      │ Verificar que o SDK do projeto é JDK 17       │
+  ├────────────────────────────────────────┼────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Porta 8080 em uso                      │ Outro processo ocupando            │ netstat -ano | findstr :8080 para identificar │
+  └────────────────────────────────────────┴────────────────────────────────────┴───────────────────────────────────────────────┘

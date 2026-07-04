@@ -1,0 +1,34 @@
+# Environment
+.env
+.env.local
+.env.prod
+
+# Local config (nunca commitar – pode conter API keys)
+**/application-local.yml
+**/application-local.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*.md
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build
+target/
+dist/
+build/
+node_modules/
+
+# Docker
+docker-compose.override.yml

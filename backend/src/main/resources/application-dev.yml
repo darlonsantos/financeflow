@@ -1,0 +1,33 @@
+# Perfil de desenvolvimento - URLs locais para links em emails e CORS
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://localhost:3001}
+email:
+  frontend-url: ${FRONTEND_URL:http://localhost:8081}
+rate-limit:
+  api:
+    requests-per-minute: 300
+
+# Ollama desabilitado (uso apenas Gemini)
+ollama:
+  enabled: ${OLLAMA_ENABLED:false}
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:llama3.2}
+  timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS:30}
+
+# Gemini - defina GEMINI_API_KEY (e GEMINI_ENABLED=true se precisar)
+gemini:
+  enabled: ${GEMINI_ENABLED:true}
+  api-key: ${GEMINI_API_KEY:AIzaSyCw1gR1O32MdZf4Unq_7OEqIDmThR-OLVk}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:30}
+  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
+  temperature: ${GEMINI_TEMPERATURE:0.2}
+
+
+open-finance:
+  enabled: ${OPEN_FINANCE_ENABLED:true}
+  provider: ${OPEN_FINANCE_PROVIDER:pluggy}
+  base-url: ${OPEN_FINANCE_BASE_URL:https://api.pluggy.ai}
+  client-id: ${OPEN_FINANCE_CLIENT_ID:c480e6ff-e74f-40fb-ad94-de87f87e3a62}
+  client-secret: ${OPEN_FINANCE_CLIENT_SECRET:c37b04c8-8621-4bba-baf5-4d64c6f1bac6}
+  crypto-key: ${OPEN_FINANCE_CRYPTO_KEY:financeflow-open-finance-key-32chars}

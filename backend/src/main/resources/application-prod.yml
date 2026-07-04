@@ -1,0 +1,28 @@
+# Perfil de produção - URLs para emails (verificação, reset de senha)
+# Sem porta quando usar proxy Nginx (https://www.darlonsantos.com.br)
+email:
+  frontend-url: ${FRONTEND_URL:https://www.darlonsantos.com.br}
+
+# Ollama desabilitado (uso apenas Gemini)
+ollama:
+  enabled: ${OLLAMA_ENABLED:false}
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:llama3.2}
+  timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS:30}
+
+# Gemini - produção: defina GEMINI_API_KEY no ambiente (secrets).
+gemini:
+  enabled: ${GEMINI_ENABLED:true}
+  api-key: ${GEMINI_API_KEY:AIzaSyCw1gR1O32MdZf4Unq_7OEqIDmThR-OLVk}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:30}
+  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
+  temperature: ${GEMINI_TEMPERATURE:0.2}
+
+open-finance:
+  enabled: ${OPEN_FINANCE_ENABLED:true}
+  provider: ${OPEN_FINANCE_PROVIDER:pluggy}
+  base-url: ${OPEN_FINANCE_BASE_URL:https://api.pluggy.ai}
+  client-id: ${OPEN_FINANCE_CLIENT_ID:}
+  client-secret: ${OPEN_FINANCE_CLIENT_SECRET:}
+  crypto-key: ${OPEN_FINANCE_CRYPTO_KEY:financeflow-open-finance-key-32chars}

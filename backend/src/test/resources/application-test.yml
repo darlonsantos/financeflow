@@ -1,0 +1,46 @@
+# Configuração para testes
+spring:
+  application:
+    name: financeflow-api-test
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  flyway:
+    enabled: false
+
+jwt:
+  secret: test-secret-key-for-testing-purposes-minimum-32-characters-required
+  refresh-secret: test-refresh-secret-key-for-testing-purposes-minimum-32-characters
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+
+logging:
+  level:
+    root: WARN
+    com.financeflow: INFO
+
+rate-limit:
+  auth:
+    requests-per-minute: 100
+    block-duration-minutes: 1
+  api:
+    requests-per-minute: 1000
+
+api:
+  version:
+    current: v1
+    default: v1
+    supported: v1
