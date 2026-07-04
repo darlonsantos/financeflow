@@ -13,6 +13,7 @@
 9. [APIs REST](#apis-rest)
 10. [Instalação e Configuração](#instalação-e-configuração)
 11. [Estrutura do Projeto](#estrutura-do-projeto)
+12. [Inteligência Artificial](#inteligência-artificial)
 
 ---
 
@@ -1267,6 +1268,14 @@ FinanceFlow/
 │       ├── dashboards/
 │       └── datasources/
 │
+├── backend/.ai/           # Workspace IA para desenvolvimento assistido
+│   ├── CLAUDE.md          # Ponto de entrada para agentes
+│   ├── roles/             # Architect, Developer, Reviewer, Investigator
+│   ├── prompts/           # Fluxos feature, bug, review, SQL
+│   ├── skills/            # Templates por tipo de tarefa
+│   ├── specs/             # Especificações de features e defects
+│   ├── tasks/             # Tasks de implementação
+│   └── decisions/         # ADRs (Architecture Decision Records)
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -1288,6 +1297,176 @@ module/
 ├── validator/      # Validadores de regras de negócio
 └── exception/      # Exceções customizadas
 ```
+
+---
+
+## 🤖 Inteligência Artificial
+
+O FinanceFlow possui duas frentes de IA: **recursos no produto** (funcionalidades para o usuário final)
+
+### Visão Geral
+
+---
+
+### Comparação: Planejado vs Implementado (Produto)
+
+Com base no roadmap (`roadmap_novas_implementacoes_finance_flow.md`, `roadmap_financeflow_atualizado.md`) e no código atual:
+
+| Funcionalidade | Planejado | Status | Como foi implementado |
+|----------------|-----------|--------|------------------------|
+| **Categorização automática** | Sugestão por descrição, histórico e padrões | ✅ **Implementado** (sem LLM) | `CategorySuggestionService` — histórico exato/similar, palavras-chave e categoria mais usada; auto-aplica se confiança ≥ 90% no formulário |
+| **Assistente financeiro (chat)** | Perguntas em linguagem natural sobre finanças | ✅ **Implementado** | `FinancialAssistantService` — Gemini → Ollama → regras (regex/intents); widget flutuante `AssistenteChat` |
+| **Projeção de saldo futuro** | Recorrências + padrões históricos | ✅ **Implementado** | `BalanceProjectionService` — média de 6 meses, recorrências e parcelas; gráfico no Dashboard |
+| **Inteligência preditiva** | Alertas preventivos (orçamento, metas, parcelas) | ✅ **Implementado** | `PredictiveIntelligenceService` — algoritmos com thresholds; página `/predictive` |
+| **Perfil financeiro comportamental** | Classificação por IA com padrões e sugestões | ✅ **Implementado** | `BehavioralProfileService` — Gemini (JSON estruturado) + fallback por regras; página `/behavioral-profile` |
+| **Relatório financeiro por IA** | Diagnóstico estilo consultoria | ⚠️ **Parcial** | `AIReportService` — texto de 2–4 parágrafos via Gemini/Ollama; botão na tela de Transações |
+| **Insights no dashboard** | Alertas contextuais | ✅ **Implementado** (sem LLM) | `useInsights` — variação de categorias, metas a vencer, recorrências (client-side) |
+| **Categorização com LLM** | IA generativa para sugerir categoria | ❌ **Não implementado** | Apenas heurísticas; LLM não é usado neste fluxo |
+| **Diagnóstico financeiro completo** | Relatório consultoria com seções estruturadas | ❌ **Não implementado** | Existe apenas o relatório texto básico (`GET /reports/ai`) |
+| **Simulador de decisões financeiras** | Simular compra parcelada, empréstimo, etc. | ❌ **Não implementado** | Previsto na Fase 2 do roadmap estratégico |
+| **Previsões e análises avançadas (ML)** | Modelos preditivos com aprendizado | ⚠️ **Parcial** | Alertas baseados em regras e médias; sem modelo de ML treinado |
+
+#### Resumo por fase do roadmap original
+
+| Fase | Planejado | Implementado | Parcial | Pendente |
+|------|-----------|--------------|---------|----------|
+| **Fase 3 — Inteligência Financeira** | 3 itens (categorização IA, projeção, assistente) | 2 | 1 | 0 |
+| **Roadmap estratégico — Fase 1** | Preditiva, diagnóstico, perfil comportamental | 2 | 1 | 0 |
+| **Roadmap estratégico — Fase 2** | Simulador de decisões | 0 | 0 | 1 |
+
+> **Nota:** O item *"IA para categorização automática"* no roadmap de longo prazo está marcado como concluído na versão heurística (sem LLM). A evolução com modelo generativo permanece pendente.
+
+---
+
+### APIs de Inteligência Artificial
+
+| Endpoint | Método | Descrição | Usa LLM |
+|----------|--------|-----------|---------|
+| `/api/v1/assistant/chat` | POST | Chat do assistente financeiro | Sim (com fallback) |
+| `/api/v1/reports/ai` | GET | Relatório financeiro em texto | Sim (com fallback) |
+| `/api/v1/behavioral-profile` | GET | Perfil comportamental | Sim (com fallback) |
+| `/api/v1/predictive/report` | GET | Alertas preditivos | Não |
+| `/api/v1/projections/balance` | GET | Projeção de saldo (1–24 meses) | Não |
+| `/api/v1/transactions/suggest-category` | POST | Sugestão de categoria | Não |
+
+---
+
+### Provedores e Configuração
+
+| Provedor | Papel | Padrão | Variáveis de ambiente |
+|----------|-------|--------|------------------------|
+| **Google Gemini** | Provedor principal | Habilitado | `GEMINI_ENABLED`, `GEMINI_API_KEY`, `GEMINI_MODEL` |
+| **Ollama** | IA local (privacidade) | Desabilitado | `OLLAMA_ENABLED`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL` |
+
+**Modelo padrão:** `gemini-2.5-flash` — temperature `0.2`, máximo `1024` tokens, timeout `30s`.
+
+**Fluxo de prioridade** (assistente, relatório IA e perfil comportamental):
+
+```
+Pergunta/Requisição
+       ↓
+Gemini configurado? ──sim──→ Resposta via API Google
+       ↓ não
+Ollama habilitado? ──sim──→ Resposta via modelo local
+       ↓ não
+Regras determinísticas / mensagem de indisponibilidade
+```
+
+**Segurança:** a chave `GEMINI_API_KEY` fica apenas no backend; o contexto enviado à IA contém somente dados do usuário autenticado (`AssistantContextBuilder`).
+
+Exemplo de variáveis no `.env`:
+
+```env
+GEMINI_ENABLED=true
+GEMINI_API_KEY=sua-chave-aqui
+GEMINI_MODEL=gemini-2.5-flash
+
+# Opcional — IA local
+OLLAMA_ENABLED=false
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+```
+
+---
+
+### Módulos Backend Relacionados
+
+| Módulo | Pacote | Responsabilidade |
+|--------|--------|------------------|
+| Assistente | `assistant/` | Chat, clientes Gemini/Ollama, montagem de contexto |
+| Preditiva | `predictive/` | Alertas de risco (orçamento, saldo, metas, parcelas) |
+| Projeções | `projections/` | Projeção de saldo futuro |
+| Comportamental | `behavioral/` | Perfil financeiro com classificação e sugestões |
+| Relatórios IA | `reports/AIReportService` | Relatório narrativo gerado por LLM |
+| Categorização | `transactions/CategorySuggestionService` | Sugestão heurística de categoria |
+
+---
+
+### Frontend — Telas e Componentes
+
+| Componente / Página | Localização | Função |
+|---------------------|-------------|--------|
+| `AssistenteChat` | Widget flutuante global | Chat com sugestões de perguntas |
+| `Predictive.tsx` | `/predictive` | Alertas preditivos e projeções integradas |
+| `BehavioralProfile.tsx` | `/behavioral-profile` | Perfil comportamental e recomendações |
+| `InsightsWidget` | Dashboard | Insights locais (sem API de IA) |
+| `TransactionForm` | Formulário de transação | Sugestão automática de categoria |
+| Relatório IA | `Transactions.tsx` | Download/visualização do relatório texto |
+
+---
+
+### Workspace de Desenvolvimento com IA (`backend/.ai/`)
+
+Estrutura para desenvolvimento assistido por agentes (Cursor, Claude, etc.), separada das features de IA do produto:
+
+| Componente | Status | Descrição |
+|------------|--------|-----------|
+| `CLAUDE.md` | ✅ | Ponto de entrada — stack, regras e skills |
+| `architecture.md` | ✅ | Módulos, fluxos e integrações (inclui Gemini/Ollama) |
+| `coding-standards.md` | ✅ | Padrões de código backend e frontend |
+| `memory.md` | ✅ | Conhecimento acumulado e decisões de negócio |
+| `debugging.md` | ✅ | Guia de investigação de problemas |
+| **Roles** (`roles/`) | ✅ | Architect, Developer, Reviewer, Investigator |
+| **Prompts** (`prompts/`) | ✅ | feature-lifecycle, bug-lifecycle, code-review, sql-analysis, analyze-project |
+| **Skills** (`skills/`) | ✅ | new-module, flyway-migration, jasperreports, debugging, security-query, frontend-feature |
+| **ADRs** (`decisions/`) | ✅ | ADR-001 (backend), ADR-002 (frontend) |
+| **Specs** (`specs/`) | ✅ Parcial | FEATURE-001 (relatório de categorias) documentada e entregue |
+| **Tasks** (`tasks/`) | ✅ Parcial | FEATURE-001 concluída; exemplo de bug (TASK-001) |
+| **MCP** (`mcp/`) | ⏳ Em configuração | Integração MCP para Postgres e filesystem |
+
+#### Fluxo de desenvolvimento assistido
+
+```
+Spec aprovado (.ai/specs/features/)
+       ↓
+Task criada (.ai/tasks/)
+       ↓
+Role Architect → análise arquitetural
+       ↓
+Role Developer → implementação (skills + coding-standards)
+       ↓
+Role Reviewer → code-review checklist
+       ↓
+Atualização memory.md + status da task
+```
+
+#### Entrega recente via workspace IA
+
+| Task | Feature | Status | Data |
+|------|---------|--------|------|
+| FEATURE-001 | Relatório PDF de categorias (JasperReports) | ✅ Aprovado | 2026-06-03 |
+
+---
+
+### Próximos Passos em IA
+
+| Prioridade | Item | Descrição |
+|------------|------|-----------|
+| Alta | Categorização com LLM | Enriquecer `CategorySuggestionService` com Gemini para descrições ambíguas |
+| Alta | Diagnóstico financeiro estruturado | Expandir `AIReportService` com seções fixas (pontos fortes, riscos, plano de ação) |
+| Média | Simulador de decisões | Novo módulo para simular impacto de compras parceladas, empréstimos, etc. |
+| Média | Ollama no Docker Compose | Facilitar IA local em ambiente de desenvolvimento |
+| Baixa | Modelos preditivos (ML) | Evoluir de regras fixas para modelos treinados com histórico do usuário |
 
 ---
 
@@ -1383,14 +1562,14 @@ mvn jacoco:report  # Gerar relatório de cobertura
 - [ ] Importação de extratos bancários
 
 ### Longo Prazo
-- [ ] Multi-moeda
+- [X] Multi-moeda
 - [X] Compartilhamento de contas
 - [X] Integrações com bancos (Open Banking)
-- [X] IA para categorização automática
-- [ ] Previsões e análises avançadas
+- [X] IA para categorização automática (heurística — ver [Inteligência Artificial](#inteligência-artificial))
+- [~] Previsões e análises avançadas (alertas preditivos e projeções implementados; ML pendente)
 - [X] PWA (Progressive Web App)
 - [X] Dark mode
-- [X] Internacionalização (i18n)
+- [x] Internacionalização (i18n)
 
 ---
 
