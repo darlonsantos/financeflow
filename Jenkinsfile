@@ -3,8 +3,8 @@ pipeline {
 
   environment {
     REGISTRY = "docker.io"
-    NAMESPACE = "darlon1234"
-    DEPLOY_HOST = "72.60.249.30"
+    NAMESPACE = "name spece do docker"
+    DEPLOY_HOST = "servidor"
     DEPLOY_USER = "root"
     DEPLOY_PATH = "/root/financeflow"
   }
